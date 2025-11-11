@@ -8,9 +8,18 @@ const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
 const BATCH_SIZE = 1000; // Количество записей для обработки за один раз
 
 function flatten(obj, prefix = '', res = {}) {
-  // Извлекаем объект из обёртки 'user', если она есть
-  if (obj && typeof obj === 'object' && !Array.isArray(obj) && obj.user) {
-    obj = obj.user;
+  // Если объект содержит единственное свойство и оно является объектом,
+  // извлекаем вложенный объект (универсальная обёртка)
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    const keys = Object.keys(obj);
+    if (keys.length === 1) {
+      const singleKey = keys[0];
+      const value = obj[singleKey];
+      // Если единственное свойство - это объект (не массив), извлекаем его
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        obj = value;
+      }
+    }
   }
   
   // Не разворачиваем вложенные объекты, просто копируем свойства первого уровня
