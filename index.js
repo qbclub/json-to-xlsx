@@ -8,18 +8,20 @@ const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
 const BATCH_SIZE = 1000; // Количество записей для обработки за один раз
 
 function flatten(obj, prefix = '', res = {}) {
-  if (Array.isArray(obj)) {
-    obj.forEach((v, i) => {
+  // Извлекаем объект из обёртки 'user', если она есть
+  if (obj && typeof obj === 'object' && !Array.isArray(obj) && obj.user) {
+    obj = obj.user;
+  }
+  
+  // Не разворачиваем вложенные объекты, просто копируем свойства первого уровня
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    Object.entries(obj).forEach(([k, v]) => {
+      // Если значение - объект или массив, преобразуем в JSON строку
       if (typeof v === 'object' && v !== null) {
-        flatten(v, `${prefix}${i}.`, res);
+        res[k] = JSON.stringify(v);
       } else {
-        res[`${prefix}${i}`] = v;
+        res[k] = v;
       }
-    });
-  } else if (typeof obj === 'object' && obj !== null) {
-    Object.entries(obj).forEach(([k,v]) => {
-      if (typeof v === 'object' && v !== null) flatten(v, `${prefix}${k}.`, res);
-      else res[`${prefix}${k}`] = v;
     });
   } else {
     // primitive
