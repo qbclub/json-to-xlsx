@@ -32,21 +32,54 @@ function filterJsonFile(inputPath, outputPath, allowedProps, unwrapKey = null) {
     // Если это массив объектов, фильтруем каждый объект
     if (Array.isArray(data)) {
       filtered = data.map(item => {
-        // Если указан ключ для распаковки, извлекаем вложенный объект
-        let target = item;
-        if (unwrapKey && item[unwrapKey]) {
-          target = item[unwrapKey];
+        // Если явно указан ключ для распаковки и он присутствует у элемента — извлекаем вложенный объект
+        if (
+          typeof unwrapKey === 'string' &&
+          unwrapKey.length > 0 &&
+          item && typeof item === 'object' &&
+          unwrapKey in item
+        ) {
+          return filterProperties(item[unwrapKey], allowedProps);
         }
-        return filterProperties(target, allowedProps);
+
+        // Если ключ распаковки не указан или пустой, сохраняем обёртку,
+        // но фильтруем вложенный объект, если элемент — обёртка вокруг одного объекта
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const keys = Object.keys(item);
+          if (
+            keys.length === 1 &&
+            item[keys[0]] && typeof item[keys[0]] === 'object' && !Array.isArray(item[keys[0]])
+          ) {
+            const k = keys[0];
+            return { [k]: filterProperties(item[k], allowedProps) };
+          }
+        }
+
+        // Иначе фильтруем сам элемент верхнего уровня
+        return filterProperties(item, allowedProps);
       });
     } 
     // Если это один объект, фильтруем его
     else if (typeof data === 'object' && data !== null) {
-      let target = data;
-      if (unwrapKey && data[unwrapKey]) {
-        target = data[unwrapKey];
+      if (
+        typeof unwrapKey === 'string' &&
+        unwrapKey.length > 0 &&
+        unwrapKey in data
+      ) {
+        filtered = filterProperties(data[unwrapKey], allowedProps);
+      } else {
+        // Пытаемся сохранить обёртку, если это объект-обёртка с единственным ключом
+        const keys = Object.keys(data);
+        if (
+          keys.length === 1 &&
+          data[keys[0]] && typeof data[keys[0]] === 'object' && !Array.isArray(data[keys[0]])
+        ) {
+          const k = keys[0];
+          filtered = { [k]: filterProperties(data[k], allowedProps) };
+        } else {
+          filtered = filterProperties(data, allowedProps);
+        }
       }
-      filtered = filterProperties(target, allowedProps);
     } 
     else {
       throw new Error('JSON должен содержать объект или массив объектов');
@@ -64,5 +97,6 @@ function filterJsonFile(inputPath, outputPath, allowedProps, unwrapKey = null) {
 }
 
 // Пример использования:
-// Извлекаем объект 'user' и оставляем только свойства id, name, email
-// filterJsonFile('./Users0.json', './Users0-filtered.json', ['id', 'name', 'email'], 'user');
+// При пустом unwrapKey объект не извлекается из свойства (например, 'user'),
+// сохраняется обёртка и фильтруется вложенный объект по указанным полям
+filterJsonFile('./Users0.json', './Users0-filtered.json', ['id', 'name', 'email'], '');
