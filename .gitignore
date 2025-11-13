@@ -137,3 +137,4 @@ large-*.json
 # OS generated files
 .DS_Store*
 Icon?
+*.json
