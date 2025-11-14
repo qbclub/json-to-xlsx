@@ -53,8 +53,15 @@ function toSheetFromArray(arr) {
   const flat = arr.map(item => flatten(item));
   const headers = Array.from(new Set(flat.flatMap(o => Object.keys(o))));
   const data = [headers];
-  flat.forEach(o => {
-    const row = headers.map(h => o[h] !== undefined ? o[h] : '');
+  flat.forEach((o, index) => {
+    const row = headers.map(h => {
+      const value = o[h] !== undefined ? o[h] : '';
+      // Проверяем длину текста
+      if (typeof value === 'string' && value.length > 32767) {
+        console.error(`Ошибка: Строка ${index + 1}, колонка "${h}" - длина текста ${value.length} символов (максимум 32767)`);
+      }
+      return value;
+    });
     data.push(row);
   });
   return xlsx.utils.aoa_to_sheet(data);
@@ -109,15 +116,29 @@ async function processLargeFile(inputPath, outputPath, batchSize = BATCH_SIZE) {
     if (isFirstBatch) {
       // Создаем новый лист с заголовками
       const sheetData = [headerArray];
-      flat.forEach(o => {
-        const row = headerArray.map(h => o[h] !== undefined ? o[h] : '');
+      flat.forEach((o, batchIdx) => {
+        const row = headerArray.map(h => {
+          const value = o[h] !== undefined ? o[h] : '';
+          // Проверяем длину текста
+          if (typeof value === 'string' && value.length > 32767) {
+            console.error(`Ошибка: Строка ${i + batchIdx + 1}, колонка "${h}" - длина текста ${value.length} символов (максимум 32767)`);
+          }
+          return value;
+        });
         sheetData.push(row);
       });
       ws = xlsx.utils.aoa_to_sheet(sheetData);
       xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
     } else {
       // Добавляем данные к существующему листу
-      const newData = flat.map(o => headerArray.map(h => o[h] !== undefined ? o[h] : ''));
+      const newData = flat.map((o, batchIdx) => headerArray.map(h => {
+        const value = o[h] !== undefined ? o[h] : '';
+        // Проверяем длину текста
+        if (typeof value === 'string' && value.length > 32767) {
+          console.error(`Ошибка: Строка ${i + batchIdx + 1}, колонка "${h}" - длина текста ${value.length} символов (максимум 32767)`);
+        }
+        return value;
+      }));
       
       if (ws && ws['!ref']) {
         const range = xlsx.utils.decode_range(ws['!ref']);
